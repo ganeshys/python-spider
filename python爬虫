@@ -1,0 +1,74 @@
+import requests
+import re
+import os
+from bs4 import BeautifulSoup
+import time
+from multiprocessing import Pool
+import multiprocessing
+
+headers =  {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36',
+        'Referer':'htttp://i.meizutu.net'
+}
+
+# 索引页页面分析
+def get_page_url(n):
+    url = "http://www.meizitu.com/a/more_%d.html" %n
+    print("-----------正在爬取第%d页--------------" %n)
+    response = requests.get(url)
+    response.encoding = "gb2312"
+    if response.status_code == 200:
+        html = response.text
+        parttens = re.compile('<div class="pic">.*?<a target=.*?"(.*?)"><img src',re.S)
+        page_urls = re.findall(parttens,html)
+
+        return page_urls
+
+# 详情页面分析
+def pares_page_url(urls,n):
+    for url in urls:
+        time.sleep(0.5)
+        response = requests.get(url)
+        html = response.text
+        partten = re.compile('<img alt=.*? src="(.*?)" /><br />',re.S)
+        page_url = re.findall(partten,html)
+        i = 0
+        for url in page_url:
+            i +=1
+            img_response = requests.get(url,headers = headers)
+            img_data = img_response.content
+            img_name = url.split("/")[-4]+url.split("/")[-3]+url.split("/")[-2]+url.split("/")[-1]
+            with open("D:\\Pythonfile\\meizitu\\meizitu2\\" +img_name,"wb") as f:
+                f.write(img_data)
+                print("正在第%d页中，%s下载完毕" %(n,img_name))
+
+    print("下载完毕")
+
+
+def main(n):
+    html = get_page_url(n)
+    pares_page_url(html,n)
+
+
+
+#  单进程爬取
+# if __name__ == "__main__":
+#     s = time.time()
+#     for i in range(1):
+#         main(i+1)
+#     e = time.time()
+#     print("单进程所耗用时间为", e - s)
+
+
+# 多进程爬取
+if __name__ == "__main__":
+    print('CPU 核心数:' + str(multiprocessing.cpu_count()))
+    print('进程数为:'+str(multiprocessing.cpu_count()))
+    s = time.time()
+    pool = Pool()
+    pool.map(main, [i+1 for i in range(3,4)])
+    pool.close()
+    pool.join()
+    e = time.time()
+    print("多进程所耗用时间为",e-s)
+
